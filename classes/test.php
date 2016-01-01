@@ -100,8 +100,7 @@ abstract class test implements observable, \countable
             ->setAsserterCallManager()
             ->enableCodeCoverage()
             ->setPhpExtensionFactory($phpExtensionFactory)
-            ->setAnalyzer($analyzer)
-        ;
+            ->setAnalyzer($analyzer);
 
         $this->observers = new \splObjectStorage();
         $this->extensions = new \splObjectStorage();
@@ -124,8 +123,7 @@ abstract class test implements observable, \countable
             $annotationExtractor
                 ->unsetHandler('ignore')
                 ->unsetHandler('tags')
-                ->unsetHandler('maxChildrenNumber')
-            ;
+                ->unsetHandler('maxChildrenNumber');
 
             $parentClass = $class;
 
@@ -461,22 +459,19 @@ abstract class test implements observable, \countable
             })
             ->setPropertyHandler('exception', function () {
                 return asserters\exception::getLastValue();
-            })
-        ;
+            });
 
         $this->assertionManager
             ->setHandler('callStaticOnTestedClass', function ($method, ...$arguments) {
                 return call_user_func_array([$this->getTestedClassName(), $method], $arguments);
-            })
-        ;
+            });
 
         $mockGenerator = $this->mockGenerator;
 
         $this->assertionManager
             ->setPropertyHandler('nextMockedMethod', function () use ($mockGenerator) {
                 return $mockGenerator->getMethod();
-            })
-        ;
+            });
 
         $returnTest = function () {
             return $this;
@@ -490,8 +485,7 @@ abstract class test implements observable, \countable
                 return $returnTest();
             })
             ->setMethodHandler('define', $returnTest)
-            ->setMethodHandler('let', $returnTest)
-        ;
+            ->setMethodHandler('let', $returnTest);
 
         $returnMockController = function (mock\aggregator $mock) {
             return $mock->getMockController();
@@ -499,9 +493,7 @@ abstract class test implements observable, \countable
 
         $this->assertionManager
             ->setHandler('calling', $returnMockController)
-            ->setHandler('ƒ', $returnMockController)
-
-        ;
+            ->setHandler('ƒ', $returnMockController);
 
         $this->assertionManager
             ->setHandler('resetMock', function (mock\aggregator $mock) {
@@ -509,8 +501,7 @@ abstract class test implements observable, \countable
             })
             ->setHandler('resetAdapter', function (test\adapter $adapter) {
                 return $adapter->resetCalls();
-            })
-        ;
+            });
 
         $phpFunctionMocker = $this->phpFunctionMocker;
 
@@ -536,8 +527,7 @@ abstract class test implements observable, \countable
             ->setHandler('as', function ($alias) use ($assertionAliaser) {
                 $assertionAliaser->to($alias);
                 return $this;
-            })
-        ;
+            });
 
         $asserterGenerator = $this->asserterGenerator;
 
@@ -565,8 +555,7 @@ abstract class test implements observable, \countable
             ->use('phpFloat')->as('float')
             ->use('phpString')->as('string')
             ->use('phpResource')->as('resource')
-            ->use('calling')->as('method')
-        ;
+            ->use('calling')->as('method');
 
         return $this;
     }
@@ -1215,7 +1204,7 @@ abstract class test implements observable, \countable
 
                     $this->testAdapterStorage->add(php\mocker::getAdapter());
 
-                    $this->beforeTestMethod($this->currentMethod);
+                    $this->callBeforeTestMethod($this->currentMethod);
 
                     $this->mockGenerator->testedClassIs($this->getTestedClassName());
 
@@ -1233,15 +1222,13 @@ abstract class test implements observable, \countable
                         ->addToAssertionManager($this->assertionManager, 'newTestedInstance', function () use ($testedClass) {
                             throw new exceptions\runtime('Tested class ' . $testedClass->getName() . ' has no constructor or its constructor has at least one mandatory argument');
                         }
-                        )
-                    ;
+                        );
 
                     $this->factoryBuilder->build($testedClass)
                         ->addToAssertionManager($this->assertionManager, 'newInstance', function () use ($testedClass) {
                             throw new exceptions\runtime('Tested class ' . $testedClass->getName() . ' has no constructor or its constructor has at least one mandatory argument');
                         }
-                        )
-                    ;
+                        );
 
                     $this->assertionManager->setPropertyHandler('testedInstance', function () use (& $instance) {
                         if ($instance === null) {
@@ -1314,8 +1301,7 @@ abstract class test implements observable, \countable
                     $this->score
                         ->addMemoryUsage($this->path, $this->class, $this->currentMethod, $memoryUsage)
                         ->addDuration($this->path, $this->class, $this->currentMethod, $duration)
-                        ->addOutput($this->path, $this->class, $this->currentMethod, ob_get_clean())
-                    ;
+                        ->addOutput($this->path, $this->class, $this->currentMethod, ob_get_clean());
 
                     if ($this->codeCoverageIsEnabled() === true) {
                         $this->score->getCoverage()->addXdebugDataForTest($this, xdebug_get_code_coverage());
@@ -1355,7 +1341,7 @@ abstract class test implements observable, \countable
                 $this->addExceptionToScore($exception);
             }
 
-            $this->afterTestMethod($this->currentMethod);
+            $this->callAfterTestMethod($this->currentMethod);
 
             $this->currentMethod = null;
 
@@ -1462,20 +1448,40 @@ abstract class test implements observable, \countable
         return $doNotCallDefaultErrorHandler;
     }
 
-    public function setUp()
+    private function callSetUp()
     {
+        if (method_exists($this, 'setUp')) {
+            $this->setUp();
+        }
+
+        return $this;
     }
 
-    public function beforeTestMethod($testMethod)
+    private function callTearDown()
     {
+        if (method_exists($this, 'tearDown')) {
+            $this->tearDown();
+        }
+
+        return $this;
     }
 
-    public function afterTestMethod($testMethod)
+    private function callBeforeTestMethod($testMethod)
     {
+        if (method_exists($this, 'beforeTestMethod')) {
+            $this->beforeTestMethod($testMethod);
+        }
+
+        return $this;
     }
 
-    public function tearDown()
+    private function callAfterTestMethod($testMethod)
     {
+        if (method_exists($this, 'afterTestMethod')) {
+            $this->afterTestMethod($testMethod);
+        }
+
+        return $this;
     }
 
     public static function setNamespace($namespace)
@@ -1585,14 +1591,14 @@ abstract class test implements observable, \countable
                         $version = $value[1];
 
                         switch ($value[0]) {
-                                case '<':
-                                case '<=':
-                                case '=':
-                                case '==':
-                                case '>=':
-                                case '>':
-                                    $operator = $value[0];
-                            }
+                            case '<':
+                            case '<=':
+                            case '=':
+                            case '==':
+                            case '>=':
+                            case '>':
+                                $operator = $value[0];
+                        }
                     }
 
                     $this->addClassPhpVersion($version, $operator);
@@ -1604,8 +1610,7 @@ abstract class test implements observable, \countable
                     $this->addMandatoryClassExtension($mandatoryExtension);
                 }
             }
-            )
-        ;
+            );
 
         return $this;
     }
@@ -1644,14 +1649,14 @@ abstract class test implements observable, \countable
                         $version = $value[1];
 
                         switch ($value[0]) {
-                                case '<':
-                                case '<=':
-                                case '=':
-                                case '==':
-                                case '>=':
-                                case '>':
-                                    $operator = $value[0];
-                            }
+                            case '<':
+                            case '<=':
+                            case '=':
+                            case '==':
+                            case '>=':
+                            case '>':
+                                $operator = $value[0];
+                        }
                     }
 
                     $this->addMethodPhpVersion($methodName, $version, $operator);
@@ -1663,8 +1668,7 @@ abstract class test implements observable, \countable
                     $this->addMandatoryMethodExtension($methodName, $mandatoryExtension);
                 }
             }
-            )
-        ;
+            );
 
         return $this;
     }
@@ -1710,7 +1714,7 @@ abstract class test implements observable, \countable
     private function runEngines()
     {
         $this->callObservers(self::beforeSetUp);
-        $this->setUp();
+        $this->callSetUp();
         $this->callObservers(self::afterSetUp);
 
         while ($this->runEngine()->engines) {
@@ -1725,8 +1729,7 @@ abstract class test implements observable, \countable
                     $this
                         ->callObservers(self::afterTestMethod)
                         ->score
-                            ->merge($score)
-                    ;
+                        ->merge($score);
 
                     $runtimeExceptions = $score->getRuntimeExceptions();
 
@@ -1825,7 +1828,7 @@ abstract class test implements observable, \countable
     private function doTearDown()
     {
         $this->callObservers(self::beforeTearDown);
-        $this->tearDown();
+        $this->callTearDown();
         $this->callObservers(self::afterTearDown);
 
         return $this;
